@@ -136,14 +136,39 @@ async function complaintDialog() {
   };
 }
 
+function bindProfileClose(el) { $('.app-close', el).onclick = () => { closeModal(); if (location.hash === '#profile') history.replaceState(null, '', `${location.pathname}${location.search}`); }; }
+
+function profileView(el, profile, notice = '') {
+  const preferences = profile.notificationPreferences || {};
+  $('.app-dialog', el).innerHTML = `<button class="app-close" type="button" aria-label="Close">×</button><h2>Profile & preferences</h2>${notice ? `<div class="app-item" role="status">${esc(notice)}</div>` : ''}<div class="app-list"><div class="app-item"><b>Name</b><br>${esc(profile.name || 'Not provided')}</div><div class="app-item"><b>Email</b><br>${esc(profile.email || 'Not provided')}</div><div class="app-item"><b>Phone</b><br>${esc(profile.phone || 'Not provided')}</div><div class="app-item"><b>Location</b><br>${esc(profile.address || 'Not provided')}</div><div class="app-item"><b>Language</b><br>${esc(profile.language || 'English')}</div><div class="app-item"><b>Notification preferences</b><br>Status updates: ${preferences.statusUpdates === false ? 'Off' : 'On'}<br>Critical alerts: ${preferences.criticalAlerts === false ? 'Off' : 'On'}<br>Resolution updates: ${preferences.resolutionUpdates === false ? 'Off' : 'On'}</div></div><div class="app-actions"><button class="primary-action edit-profile" type="button">Edit Profile</button><button class="logout-action" type="button">Sign Out</button></div>`;
+  bindProfileClose(el);
+  $('.edit-profile', el).onclick = () => profileEdit(el, profile);
+  $('.logout-action', el).onclick = logout;
+}
+
+function profileEdit(el, profile) {
+  const preferences = profile.notificationPreferences || {};
+  $('.app-dialog', el).innerHTML = `<button class="app-close" type="button" aria-label="Close">×</button><h2>Edit profile</h2><form class="app-form"><label>Name<input name="name" value="${esc(profile.name)}" required></label><label>Email<input name="email" type="email" value="${esc(profile.email)}" required></label><label>Phone<input name="phone" value="${esc(profile.phone)}"></label><label>Location<input name="address" value="${esc(profile.address)}"></label><label>Language<select name="language"><option ${profile.language === 'English' ? 'selected' : ''}>English</option><option ${profile.language === 'Hindi' ? 'selected' : ''}>Hindi</option><option ${profile.language === 'Hinglish' ? 'selected' : ''}>Hinglish</option></select></label><div class="app-item"><b>Notification preferences</b><label><input type="checkbox" name="statusUpdates" ${preferences.statusUpdates === false ? '' : 'checked'}> Status updates</label><label><input type="checkbox" name="criticalAlerts" ${preferences.criticalAlerts === false ? '' : 'checked'}> Critical alerts</label><label><input type="checkbox" name="resolutionUpdates" ${preferences.resolutionUpdates === false ? '' : 'checked'}> Resolution updates</label></div><div class="app-message" hidden></div><div class="app-actions"><button class="primary-action" type="submit">Save Changes</button><button class="cancel-profile" type="button">Cancel</button></div></form>`;
+  bindProfileClose(el);
+  const form = $('form', el);
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const message = $('.app-message', form); const submit = $('button[type="submit"]', form); const values = Object.fromEntries(new FormData(form));
+    submit.disabled = true; submit.textContent = 'Saving...'; message.hidden = true;
+    try {
+      state.user = await api('/api/profile', { method: 'PATCH', body: JSON.stringify({ name: values.name, email: values.email, phone: values.phone || null, address: values.address || null, language: values.language, notificationPreferences: { statusUpdates: values.statusUpdates === 'on', criticalAlerts: values.criticalAlerts === 'on', resolutionUpdates: values.resolutionUpdates === 'on' } }) });
+      profileView(el, state.user, 'Profile saved successfully.');
+      await hydrate();
+      window.setTimeout(() => { if ($('#app-overlay')) window.location.hash = 'profile'; window.location.reload(); }, 900);
+    } catch (error) { message.textContent = error.message; message.hidden = false; submit.disabled = false; submit.textContent = 'Save Changes'; }
+  };
+  $('.cancel-profile', el).onclick = () => profileView(el, profile);
+}
+
 async function profileDialog() {
-  try {
-    const profile = await api('/api/profile');
-    const el = modal('Profile & preferences', `<form class="app-form"><label>Name<input name="name" value="${esc(profile.name)}" required></label><label>Phone<input name="phone" value="${esc(profile.phone)}"></label><label>Location<input name="address" value="${esc(profile.address)}"></label><label>Language<select name="language"><option ${profile.language === 'English' ? 'selected' : ''}>English</option><option ${profile.language === 'Hindi' ? 'selected' : ''}>Hindi</option><option ${profile.language === 'Hinglish' ? 'selected' : ''}>Hinglish</option></select></label><div class="app-message" hidden></div><div class="app-actions"><button class="primary-action" type="submit">Save Changes</button><button type="button" class="logout-action">Sign Out</button></div></form>`);
-    const form = $('form', el);
-    form.onsubmit = async (event) => { event.preventDefault(); const message = $('.app-message', form); try { state.user = await api('/api/profile', { method: 'PATCH', body: JSON.stringify(Object.fromEntries(new FormData(form))) }); closeModal(); await hydrate(); toast('Profile saved.'); } catch (error) { message.textContent = error.message; message.hidden = false; } };
-    $('.logout-action', el).onclick = logout;
-  } catch { authDialog(); }
+  const el = modal('Profile & preferences', '<div class="app-empty" role="status">Loading profile...</div>');
+  try { const profile = await api('/api/profile'); profileView(el, profile); }
+  catch (error) { $('.app-dialog', el).innerHTML = `<button class="app-close" type="button" aria-label="Close">×</button><h2>Profile & preferences</h2><div class="app-message" role="alert">${esc(error.message)}</div><div class="app-actions"><button class="retry-profile" type="button">Retry</button></div>`; bindProfileClose(el); $('.retry-profile', el).onclick = profileDialog; }
 }
 
 async function logout() { try { await api('/api/auth/logout', { method: 'POST' }); closeModal(); state.user = null; location.reload(); } catch (error) { toast(error.message); } }
@@ -247,7 +272,7 @@ function wireNavigation() {
 
 async function start() {
   wireNavigation();
-  try { state.user = await api('/api/auth/session'); if (state.user) await hydrate(); else authDialog(); }
+  try { state.user = await api('/api/auth/session'); if (state.user) { await hydrate(); if (location.hash === '#profile') profileDialog(); } else authDialog(); }
   catch (error) { toast(error.message); authDialog(); }
 }
 
