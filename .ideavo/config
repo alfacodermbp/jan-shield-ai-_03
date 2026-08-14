@@ -1,0 +1,27 @@
+{
+  "systemSetup": [],
+  "templateName": "custom",
+  "projectDependencies": [],
+  "codeChecks": [],
+  "buildSteps": [],
+  "runStep": [
+    {
+      "name": "Run Dev Server",
+      "command": "npx --yes http-server . -p 3000 -a 0.0.0.0",
+      "port": "3000"
+    }
+  ],
+  "deploySteps": [],
+  "cleanupFiles": [
+    ".env",
+    ".ideavo/config",
+    ".ideavo/template"
+  ],
+  "packageManager": "npm",
+  "envPaths": [
+    {
+      "name": "default",
+      "path": ".env"
+    }
+  ]
+}
