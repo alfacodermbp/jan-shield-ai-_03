@@ -1,21 +1,254 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
-const toBase64 = (bytes) => { let binary = ''; for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000)); return btoa(binary); };
-const api = async (url, options = {}) => { const response = await fetch(url, { headers: { 'content-type': 'application/json', ...(options.headers || {}) }, ...options }); const body = await response.json(); if (!response.ok || !body.success) throw new Error(body.error?.message || 'Unable to complete request.'); return body.data; };
-const state = { user: null, complaints: [], activeComplaint: null };
-const overlay = (title, body) => { const old = $('#app-overlay'); if (old) old.remove(); const el = document.createElement('div'); el.id='app-overlay'; el.innerHTML=`<div class="app-backdrop"><section class="app-dialog" role="dialog" aria-modal="true"><button class="app-close" aria-label="Close">×</button><h2>${title}</h2>${body}</section></div>`; document.body.append(el); $('.app-close',el).onclick=()=>el.remove(); return el; };
-const style = () => { const s=document.createElement('style');s.textContent=`.app-backdrop{position:fixed;inset:0;z-index:100;background:rgba(11,18,32,.45);backdrop-filter:blur(5px);display:grid;place-items:center;padding:16px}.app-dialog{position:relative;width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border:1px solid #c6c6cc;border-radius:12px;padding:28px;color:#191c1e;box-shadow:0 20px 60px #0b122033}.app-dialog h2{font:600 24px/32px Inter;margin:0 0 20px}.app-close{position:absolute;right:16px;top:12px;border:0;background:none;font-size:28px;color:#45474c;cursor:pointer}.app-form{display:grid;gap:14px}.app-form label{font:600 12px/16px Inter;letter-spacing:.05em;text-transform:uppercase}.app-form input,.app-form textarea,.app-form select{width:100%;margin-top:6px;padding:11px;border:1px solid #c6c6cc;border-radius:4px;font:14px Inter}.app-form textarea{min-height:100px;resize:vertical}.app-actions{display:flex;gap:10px;flex-wrap:wrap}.app-message{font:14px/20px Inter;color:#ba1a1a}.app-list{display:grid;gap:12px}.app-item{padding:16px;border:1px solid #c6c6cc;border-radius:8px;background:#fff}.app-item button{cursor:pointer}.app-demo{font:12px Inter;color:#76777d;margin-top:10px}.app-toast{position:fixed;right:20px;bottom:20px;z-index:120;background:#151b2a;color:#fff;padding:12px 16px;border-radius:6px;font:14px Inter}`;document.head.append(s);};
-const toast = (message) => { const el=document.createElement('div');el.className='app-toast';el.textContent=message;document.body.append(el);setTimeout(()=>el.remove(),2800); };
-function authDialog() { const el=overlay('Welcome to JAN-SHIELD AI',`<p style="font:16px/24px Inter;color:#45474c;margin-bottom:18px">From Citizen Voice to Actionable Intelligence.</p><form class="app-form"><label>Email<input name="email" type="email" required value="citizen@jan-shield.local"></label><label>Password<input name="password" type="password" required value="Citizen123!"></label><div class="app-message" hidden></div><div class="app-actions"><button class="primary-action" type="submit">Sign In</button><button type="button" class="register-action">Create Citizen Account</button></div><div class="app-demo">Demo accounts: citizen@jan-shield.local / Citizen123! · authority@jan-shield.local / Authority123!</div></form>`);const form=$('form',el);form.onsubmit=async(e)=>{e.preventDefault();const msg=$('.app-message',form), data=Object.fromEntries(new FormData(form));msg.hidden=true;try{state.user=await api('/api/auth/login',{method:'POST',body:JSON.stringify(data)});el.remove();hydrate();toast('Signed in successfully.');}catch(err){msg.textContent=err.message;msg.hidden=false;}};$('.register-action',el).onclick=()=>registerDialog();return el;}
-function registerDialog(){const el=overlay('Create your citizen account',`<form class="app-form"><label>Name<input name="name" required></label><label>Email<input name="email" type="email" required></label><label>Password<input name="password" type="password" minlength="8" required></label><label>Ward or location<input name="address"></label><div class="app-message" hidden></div><button class="primary-action" type="submit">Register</button></form>`);$('form',el).onsubmit=async(e)=>{e.preventDefault();const form=e.currentTarget,msg=$('.app-message',form);try{state.user=await api('/api/auth/register',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form)))});el.remove();hydrate();toast('Account created.');}catch(err){msg.textContent=err.message;msg.hidden=false;}};}
-async function hydrate(){state.complaints=await api('/api/complaints');const active=state.complaints.filter(c=>!['RESOLVED','REJECTED'].includes(c.status)).length;const resolved=state.complaints.filter(c=>c.status==='RESOLVED').length;const stats=[...document.querySelectorAll('.font-display-lg.text-display-lg')];if(stats[0])stats[0].textContent=active;if(stats[1])stats[1].textContent=resolved;if(stats[2])stats[2].textContent=state.complaints.filter(c=>c.status==='RESOLUTION_PENDING_VERIFICATION').length;const cards=[...document.querySelectorAll('h3.font-title-lg')];state.complaints.slice(0,2).forEach((c,i)=>{if(cards[i]){cards[i].textContent=c.title;const card=cards[i].closest('.bg-surface-container-lowest');card.dataset.complaintId=c.id;card.onclick=()=>complaintDetail(card);}});const profile=$('aside h2');if(profile&&state.user)profile.textContent=state.user.role==='CITIZEN'?'Citizen Portal':'Authority Command';}
-function complaintDialog(){const el=overlay('Report a new issue',`<form class="app-form"><label>Title<input name="title" required placeholder="What needs attention?"></label><label>Description<textarea name="description" required placeholder="Describe the issue, duration, and impact."></textarea></label><label>Category<select name="category"><option value="">Auto-detect</option><option>Waste Management</option><option>Roads</option><option>Water Supply</option><option>Streetlights</option><option>Drainage</option></select></label><label>Ward or location<input name="ward" placeholder="Ward 17"></label><label>Evidence<input name="evidence" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf"></label><div class="app-message" hidden></div><button class="primary-action" type="submit">Submit Complaint</button></form>`);$('form',el).onsubmit=async(e)=>{e.preventDefault();const f=e.currentTarget,msg=$('.app-message',f),submit=$('button[type="submit"]',f),data=Object.fromEntries(new FormData(f));delete data.evidence;const file=f.evidence.files[0];if(file){if(file.size>10*1024*1024){msg.textContent='Evidence must be smaller than 10 MB.';msg.hidden=false;return;}data.evidence={name:file.name,type:file.type,size:file.size};}submit.disabled=true;try{const c=await api('/api/complaints',{method:'POST',body:JSON.stringify(data)});if(file){const raw=await file.arrayBuffer();await api('/api/evidence',{method:'POST',body:JSON.stringify({complaintId:c.id,name:file.name,type:file.type,size:file.size,data:toBase64(new Uint8Array(raw))})});}el.remove();await hydrate();toast(`Complaint ${c.id} submitted.`);}catch(err){msg.textContent=err.message;msg.hidden=false;submit.disabled=false;}};}
-function profileDialog(){api('/api/profile').then(p=>{const el=overlay('Profile & preferences',`<form class="app-form"><label>Name<input name="name" value="${p.name||''}" required></label><label>Phone<input name="phone" value="${p.phone||''}"></label><label>Location<input name="address" value="${p.address||''}"></label><label>Language<select name="language"><option ${p.language==='English'?'selected':''}>English</option><option ${p.language==='Hindi'?'selected':''}>Hindi</option><option ${p.language==='Hinglish'?'selected':''}>Hinglish</option></select></label><div class="app-message" hidden></div><div class="app-actions"><button class="primary-action" type="submit">Save Changes</button><button type="button" class="logout-action">Sign Out</button></div></form>`);$('form',el).onsubmit=async(e)=>{e.preventDefault();try{state.user=await api('/api/profile',{method:'PATCH',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});el.remove();toast('Profile saved.');}catch(err){const m=$('.app-message',e.currentTarget);m.textContent=err.message;m.hidden=false;}};$('.logout-action',el).onclick=async()=>{await api('/api/auth/logout',{method:'POST'});location.reload();};}).catch(()=>authDialog());}
-function complaintDetail(card){const cid=card.dataset.complaintId;if(!cid)return;api(`/api/complaints/${encodeURIComponent(cid)}`).then(c=>{const el=overlay(esc(c.title),`<p style="font:14px/20px Inter;color:#45474c">${esc(c.description)}</p><div class="app-list"><div class="app-item"><b>${esc(c.id)}</b><br>Status: ${esc(c.status)}<br>Priority: ${esc(c.priority)} (${Number(c.priorityScore)||0}/100)<br>Category: ${esc(c.category)}<br>Location: ${esc(c.location||c.ward||'Not provided')}</div><div class="app-item"><b>AI analysis</b><br>${esc(c.analysis?.summary||'Analysis pending.')}<br><small>Confidence: ${c.analysis?.confidence?Math.round(c.analysis.confidence*100)+'%':'—'}</small></div>${state.user?.role==='AUTHORITY'||state.user?.role==='ADMIN'?'<form class="app-form" id="resolution-form"><label>Resolution note<textarea name="note" required placeholder="Describe the action taken."></textarea></label><div class="app-message" hidden></div><button type="submit">Submit Resolution</button></form>':''}</div>`);const form=$('#resolution-form',el);if(form)form.onsubmit=async(e)=>{e.preventDefault();const message=$('.app-message',form);const submit=$('button',form);submit.disabled=true;try{await api(`/api/complaints/${encodeURIComponent(cid)}/resolve`,{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form)))});el.remove();toast('Resolution submitted for citizen verification.');}catch(err){message.textContent=err.message;message.hidden=false;submit.disabled=false;}};}).catch(err=>toast(err.message));}
-async function analyticsDialog(){try{const a=await api('/api/analytics');const category=a.byCategory.map(x=>`<div class="app-item"><b>${x.category}</b><br>${x.count} complaints</div>`).join('');overlay('AI Analytics',`<div class="app-list"><div class="app-item"><b>${a.total}</b> total complaints<br>Systemic patterns: ${a.systemicIssues}</div>${category||'<p>No complaint data yet.</p>'}</div>`);}catch(err){toast(err.message);}}
-async function mapDialog(){const el=overlay('Real-time grievance map','<div id="app-map" style="height:360px;border-radius:8px;background:#eceef0"></div><p id="map-fallback" style="font:14px/20px Inter;color:#45474c">Loading live complaint locations...</p>');let points=[];try{points=await api('/api/map-data');if(!points.length){$('#map-fallback',el).textContent='No geolocated complaints yet. Add a location when reporting an issue.';return;}const load=()=>new Promise((resolve,reject)=>{if(window.L)return resolve();const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.append(css);const script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';script.onload=resolve;script.onerror=reject;document.head.append(script);});await load();const map=L.map($('#app-map',el)).setView([points[0].latitude,points[0].longitude],12);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);points.forEach(p=>L.marker([p.latitude,p.longitude]).addTo(map).bindPopup(`<b>${p.id}</b><br>${p.title}<br>${p.priority} · ${p.status}`));$('#map-fallback',el).textContent=`${points.length} locations from the application database.`;}catch(err){$('#app-map',el).style.display='none';$('#map-fallback',el).innerHTML=`Map tiles are unavailable. <b>Location list fallback:</b><br>${points.map(p=>`${p.ward||'Unknown ward'} — ${p.title} — ${p.priority}`).join('<br>')}<br><button id="map-retry" type="button">Retry map</button>`;$('#map-retry',el).onclick=mapDialog;}}
-async function notificationDialog(){try{const ns=await api('/api/notifications');const items=ns.map(n=>'<div class="app-item"><b>'+n.title+'</b><br>'+n.message+'</div>').join('');overlay('Notifications',items?'<div class="app-list">'+items+'</div>':'<p>No notifications yet.</p>');}catch(err){toast(err.message);}}
-function complaintQueue(){const items=state.complaints.map(c=>'<div class="app-item" data-complaint-id="'+c.id+'"><b>'+c.id+'</b> · '+c.priority+'<br>'+c.title+'<br><small>'+c.status+(c.isDemoData?' · SYNTHETIC DEMO':'')+'</small></div>').join('');const el=overlay('Complaint queue',items?'<div class="app-list">'+items+'</div>':'<p>No complaints found.</p>');document.querySelectorAll('[data-complaint-id]',el).forEach(c=>c.onclick=()=>complaintDetail(c));}
-function wire(){style();document.querySelectorAll('button').forEach(b=>{const t=b.textContent.trim();if(t.includes('Report New Issue')||t.includes('Citizen Portal'))b.onclick=complaintDialog;else if(t.includes('Sign Out')||t.includes('settings'))b.onclick=profileDialog;else if(t.includes('notifications'))b.onclick=notificationDialog;else if(t.includes('Switch to Citizen View'))b.onclick=()=>toast('Citizen view is available from your account role.');else if(t.includes('Emergency Alert'))b.onclick=()=>toast('Emergency alert requires an active incident and authority authorization.');});document.querySelectorAll('a').forEach(a=>a.onclick=(e)=>{if(a.getAttribute('href')!=='#')return;e.preventDefault();const text=a.textContent.trim();if(text.includes('Real-time Map'))mapDialog();else if(text.includes('AI Analytics')||text.includes('Reports'))analyticsDialog();else if(text.includes('Grievance Feed')||text.includes('Incidents'))complaintQueue();else if(text.includes('Sign Out'))profileDialog();else if(text.includes('Support')||text.includes('Contact'))toast('Support request channel is not configured.');else toast(text+' is ready for data-driven views.');});}
-async function start(){wire();try{state.user=await api('/api/auth/session');if(state.user)await hydrate();else authDialog();}catch(err){toast('Unable to connect to the application server.');authDialog();}}
+const state = { user: null, complaints: [] };
+
+const api = async (url, options = {}) => {
+  const response = await fetch(url, { headers: { 'content-type': 'application/json', ...(options.headers || {}) }, ...options });
+  const text = await response.text();
+  let body;
+  try { body = text ? JSON.parse(text) : {}; } catch { throw new Error('The server returned an invalid response.'); }
+  if (!response.ok || !body.success) throw new Error(body.error?.message || 'Unable to complete request.');
+  return body.data;
+};
+
+const toast = (message) => {
+  const el = document.createElement('div');
+  el.className = 'app-toast';
+  el.textContent = message;
+  document.body.append(el);
+  window.setTimeout(() => el.remove(), 2800);
+};
+
+const style = () => {
+  if ($('#app-style')) return;
+  const s = document.createElement('style');
+  s.id = 'app-style';
+  s.textContent = `.app-backdrop{position:fixed;inset:0;z-index:100;background:rgba(11,18,32,.45);backdrop-filter:blur(5px);display:grid;place-items:center;padding:16px}.app-dialog{position:relative;width:min(680px,100%);max-height:90vh;overflow:auto;background:#fff;border:1px solid #c6c6cc;border-radius:12px;padding:28px;color:#191c1e;box-shadow:0 20px 60px #0b122033}.app-dialog h2{font:600 24px/32px Inter;margin:0 0 20px}.app-close{position:absolute;right:16px;top:12px;border:0;background:none;font-size:28px;color:#45474c;cursor:pointer}.app-form{display:grid;gap:14px}.app-form label{font:600 12px/16px Inter;letter-spacing:.05em;text-transform:uppercase}.app-form input,.app-form textarea,.app-form select{width:100%;margin-top:6px;padding:11px;border:1px solid #c6c6cc;border-radius:4px;font:14px Inter}.app-form textarea{min-height:100px;resize:vertical}.app-actions{display:flex;gap:10px;flex-wrap:wrap}.app-actions button,.app-form button,.app-item button{cursor:pointer;padding:10px 14px;border:1px solid #76777d;border-radius:4px;background:#fff;color:#191c1e;font:600 14px Inter}.app-actions .primary-action,.app-form .primary-action{background:#000;color:#fff;border-color:#000}.app-form button:disabled{opacity:.55;cursor:wait}.app-message{font:14px/20px Inter;color:#ba1a1a}.app-list{display:grid;gap:12px}.app-item{padding:16px;border:1px solid #c6c6cc;border-radius:8px;background:#fff}.app-item small{color:#76777d}.app-demo{font:12px Inter;color:#76777d;margin-top:10px}.app-toast{position:fixed;right:20px;bottom:20px;z-index:120;background:#151b2a;color:#fff;padding:12px 16px;border-radius:6px;font:14px Inter}.app-empty{padding:24px;border:1px dashed #c6c6cc;border-radius:8px;color:#45474c;font:14px/20px Inter}.app-status{font:600 12px Inter;letter-spacing:.04em;text-transform:uppercase;color:#0051d5}`;
+  document.head.append(s);
+};
+
+const closeModal = () => $('#app-overlay')?.remove();
+const modal = (title, body) => {
+  closeModal();
+  const el = document.createElement('div');
+  el.id = 'app-overlay';
+  el.innerHTML = `<div class="app-backdrop"><section class="app-dialog" role="dialog" aria-modal="true" aria-label="${esc(title)}"><button class="app-close" type="button" aria-label="Close">×</button><h2>${esc(title)}</h2>${body}</section></div>`;
+  document.body.append(el);
+  $('.app-close', el).onclick = closeModal;
+  $('.app-backdrop', el).onclick = (event) => { if (event.target === $('.app-backdrop', el)) closeModal(); };
+  return el;
+};
+
+const restricted = (roles) => Boolean(state.user && roles.includes(state.user.role));
+const unavailable = (title, message) => modal(title, `<div class="app-empty">${esc(message)}</div>`);
+
+function authDialog() {
+  const el = modal('Welcome to JAN-SHIELD AI', `<p style="font:16px/24px Inter;color:#45474c;margin-bottom:18px">From Citizen Voice to Actionable Intelligence.</p><form class="app-form"><label>Email<input name="email" type="email" required value="citizen@jan-shield.local"></label><label>Password<input name="password" type="password" required value="Citizen123!"></label><div class="app-message" hidden></div><div class="app-actions"><button class="primary-action" type="submit">Sign In</button><button type="button" class="register-action">Create Citizen Account</button></div><div class="app-demo">Demo accounts: citizen@jan-shield.local / Citizen123! · authority@jan-shield.local / Authority123!</div></form>`);
+  const form = $('form', el);
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const message = $('.app-message', form);
+    const submit = $('button[type="submit"]', form);
+    submit.disabled = true;
+    try { state.user = await api('/api/auth/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(form))) }); closeModal(); await hydrate(); toast('Signed in successfully.'); }
+    catch (error) { message.textContent = error.message; message.hidden = false; submit.disabled = false; }
+  };
+  $('.register-action', el).onclick = registerDialog;
+}
+
+function registerDialog() {
+  const el = modal('Create your citizen account', `<form class="app-form"><label>Name<input name="name" required></label><label>Email<input name="email" type="email" required></label><label>Password<input name="password" type="password" minlength="8" required></label><label>Ward or location<input name="address"></label><div class="app-message" hidden></div><div class="app-actions"><button class="primary-action" type="submit">Register</button><button type="button" class="back-auth">Back to sign in</button></div></form>`);
+  const form = $('form', el);
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const message = $('.app-message', form);
+    const submit = $('button[type="submit"]', form);
+    submit.disabled = true;
+    try { state.user = await api('/api/auth/register', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(form))) }); closeModal(); await hydrate(); toast('Account created.'); }
+    catch (error) { message.textContent = error.message; message.hidden = false; submit.disabled = false; }
+  };
+  $('.back-auth', el).onclick = authDialog;
+}
+
+function updateRoleVisibility() {
+  const authority = restricted(['AUTHORITY', 'ADMIN']);
+  const citizen = restricted(['CITIZEN']);
+  document.querySelectorAll('a,button').forEach((element) => {
+    const text = element.textContent.trim();
+    const authorityOnly = ['Command Center', 'Real-time Map', 'Grievance Feed', 'AI Analytics', 'Public Trust', 'Audit Log', 'Emergency Alert', 'Incidents', 'Resources', 'Reports'].some((item) => text.includes(item));
+    if (authorityOnly) element.hidden = !authority;
+    if (text.includes('Citizen Portal') || text.includes('Report New Issue')) element.hidden = !citizen;
+    if (text.includes('Switch to Citizen View')) element.hidden = true;
+  });
+  const heading = $('aside h2');
+  if (heading) heading.textContent = citizen ? 'Citizen Portal' : 'Authority Command';
+  const nav = $('aside nav');
+  if (authority && nav) {
+    if (!nav.querySelector('[data-nav="departments"]')) { const link = document.createElement('a'); link.dataset.nav = 'departments'; link.href = '#'; link.className = 'flex items-center gap-sm px-md py-sm rounded-xl font-title-md text-on-surface-variant hover:bg-surface-container-high'; link.innerHTML = '<span class="material-symbols-outlined">account_balance</span> Departments'; link.onclick = (event) => { event.preventDefault(); departmentsDialog(); }; nav.append(link); }
+    if (!nav.querySelector('[data-nav="systemic"]')) { const link = document.createElement('a'); link.dataset.nav = 'systemic'; link.href = '#'; link.className = 'flex items-center gap-sm px-md py-sm rounded-xl font-title-md text-on-surface-variant hover:bg-surface-container-high'; link.innerHTML = '<span class="material-symbols-outlined">hub</span> Systemic Issues'; link.onclick = (event) => { event.preventDefault(); systemicDialog(); }; nav.append(link); }
+  }
+  if (!$('#mobile-menu')) { const menu = document.createElement('button'); menu.id = 'mobile-menu'; menu.type = 'button'; menu.textContent = 'Menu'; menu.className = 'md:hidden fixed left-4 top-4 z-[60] px-3 py-2 rounded-lg bg-primary text-on-primary'; menu.onclick = () => { const aside = $('aside'); if (aside) aside.style.display = aside.style.display === 'flex' ? '' : 'flex'; }; document.body.append(menu); }
+}
+
+async function hydrate() {
+  updateRoleVisibility();
+  state.complaints = await api('/api/complaints');
+  const active = state.complaints.filter((complaint) => !['RESOLVED', 'REJECTED'].includes(complaint.status)).length;
+  const resolved = state.complaints.filter((complaint) => complaint.status === 'RESOLVED').length;
+  const awaiting = state.complaints.filter((complaint) => complaint.status === 'RESOLUTION_PENDING_VERIFICATION').length;
+  const stats = [...document.querySelectorAll('.font-display-lg.text-display-lg')];
+  [active, resolved, awaiting].forEach((value, index) => { if (stats[index]) stats[index].textContent = value; });
+  const cards = [...document.querySelectorAll('h3.font-title-lg')];
+  const cardShells = cards.map((heading) => heading.closest('.bg-surface-container-lowest')).filter(Boolean);
+  cardShells.forEach((card) => { card.hidden = false; card.removeAttribute('data-complaint-id'); });
+  state.complaints.slice(0, 2).forEach((complaint, index) => {
+    const heading = cards[index];
+    const card = cardShells[index];
+    if (!heading || !card) return;
+    heading.textContent = complaint.title;
+    card.dataset.complaintId = complaint.id;
+    const badge = card.querySelector('.uppercase');
+    if (badge) badge.textContent = `${complaint.priority} Priority`;
+    const metadata = card.querySelector('.font-body-sm');
+    if (metadata) metadata.textContent = `${complaint.category} · ${complaint.status}`;
+    card.onclick = () => complaintDetail(complaint.id);
+  });
+  cardShells.slice(state.complaints.length, 2).forEach((card) => { card.hidden = true; });
+  const container = cards[0]?.closest('.flex.flex-col.gap-md');
+  if (container && !state.complaints.length && !$('.app-inline-empty', container)) { const empty = document.createElement('div'); empty.className = 'app-empty app-inline-empty'; empty.textContent = 'No complaints found yet.'; container.append(empty); }
+}
+
+async function complaintDialog() {
+  if (!restricted(['CITIZEN'])) return unavailable('Citizen access required', 'Only citizen accounts can submit complaints.');
+  const el = modal('Report a new issue', `<form class="app-form"><label>Title<input name="title" required placeholder="What needs attention?"></label><label>Description<textarea name="description" required placeholder="Describe the issue, duration, and impact."></textarea></label><label>Category<select name="category"><option value="">Auto-detect</option><option>Waste Management</option><option>Roads</option><option>Water Supply</option><option>Streetlights</option><option>Drainage</option></select></label><label>Ward or location<input name="ward" placeholder="Ward 17"></label><label>Latitude<input name="latitude" type="number" step="any"></label><label>Longitude<input name="longitude" type="number" step="any"></label><label>Evidence<input name="evidence" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf"></label><div class="app-message" hidden></div><button class="primary-action" type="submit">Submit Complaint</button></form>`);
+  const form = $('form', el);
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const message = $('.app-message', form); const submit = $('button[type="submit"]', form); const data = Object.fromEntries(new FormData(form)); const file = form.evidence.files[0];
+    delete data.evidence;
+    if (file) { if (file.size > 10 * 1024 * 1024) { message.textContent = 'Evidence must be smaller than 10 MB.'; message.hidden = false; return; } data.evidence = { name: file.name, type: file.type, size: file.size }; }
+    submit.disabled = true;
+    try {
+      const complaint = await api('/api/complaints', { method: 'POST', body: JSON.stringify(data) });
+      if (file) { const bytes = new Uint8Array(await file.arrayBuffer()); let binary = ''; for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000)); await api('/api/evidence', { method: 'POST', body: JSON.stringify({ complaintId: complaint.id, name: file.name, type: file.type, size: file.size, data: btoa(binary) }) }); }
+      closeModal(); await hydrate(); toast(`Complaint ${complaint.id} submitted.`);
+    } catch (error) { message.textContent = error.message; message.hidden = false; submit.disabled = false; }
+  };
+}
+
+async function profileDialog() {
+  try {
+    const profile = await api('/api/profile');
+    const el = modal('Profile & preferences', `<form class="app-form"><label>Name<input name="name" value="${esc(profile.name)}" required></label><label>Phone<input name="phone" value="${esc(profile.phone)}"></label><label>Location<input name="address" value="${esc(profile.address)}"></label><label>Language<select name="language"><option ${profile.language === 'English' ? 'selected' : ''}>English</option><option ${profile.language === 'Hindi' ? 'selected' : ''}>Hindi</option><option ${profile.language === 'Hinglish' ? 'selected' : ''}>Hinglish</option></select></label><div class="app-message" hidden></div><div class="app-actions"><button class="primary-action" type="submit">Save Changes</button><button type="button" class="logout-action">Sign Out</button></div></form>`);
+    const form = $('form', el);
+    form.onsubmit = async (event) => { event.preventDefault(); const message = $('.app-message', form); try { state.user = await api('/api/profile', { method: 'PATCH', body: JSON.stringify(Object.fromEntries(new FormData(form))) }); closeModal(); await hydrate(); toast('Profile saved.'); } catch (error) { message.textContent = error.message; message.hidden = false; } };
+    $('.logout-action', el).onclick = logout;
+  } catch { authDialog(); }
+}
+
+async function logout() { try { await api('/api/auth/logout', { method: 'POST' }); closeModal(); state.user = null; location.reload(); } catch (error) { toast(error.message); } }
+
+function complaintDetail(id) {
+  api(`/api/complaints/${encodeURIComponent(id)}`).then(async (complaint) => {
+    const related = complaint.related?.length ? `<div class="app-item"><b>Related complaints</b><br>${complaint.related.map((item) => `${esc(item.id)} · ${esc(item.title)} (${Math.round(item.similarityScore * 100)}%)`).join('<br>')}</div>` : '<div class="app-empty">No stored related complaints.</div>';
+    const evidence = complaint.evidence?.length ? `<div class="app-item"><b>Evidence</b><br>${complaint.evidence.map((item) => `${esc(item.fileName)} · ${item.size} bytes`).join('<br>')}</div>` : '<div class="app-empty">No evidence attached.</div>';
+    const authority = restricted(['AUTHORITY', 'ADMIN']);
+    const citizenVerification = restricted(['CITIZEN']) && complaint.status === 'RESOLUTION_PENDING_VERIFICATION' ? '<form class="app-form" id="verification-form"><label>Comment<textarea name="comment" placeholder="Tell us what happened."></textarea></label><div class="app-actions"><button class="primary-action" name="resolved" value="true" type="submit">Issue Resolved</button><button name="resolved" value="false" type="submit">Still Unresolved</button></div></form>' : '';
+    const authorityControls = authority ? `<form class="app-form" id="workflow-form"><label>Department<select name="departmentId" id="department-select"><option value="">Unassigned</option></select></label><label>Status<select name="status"><option>SUBMITTED</option><option>AI_ANALYZED</option><option>ASSIGNED</option><option>ACTION_INITIATED</option><option>IN_PROGRESS</option><option>RESOLUTION_PENDING_VERIFICATION</option><option>RESOLVED</option><option>REOPENED</option><option>REJECTED</option></select></label><button class="primary-action" type="submit">Save Workflow Update</button></form><form class="app-form" id="resolution-form"><label>Resolution note<textarea name="note" required placeholder="Describe the action taken."></textarea></label><button type="submit">Submit Resolution</button></form>` : '';
+    const el = modal(complaint.title, `<div class="app-list"><div class="app-item"><b>${esc(complaint.id)}</b><br>Status: <span class="app-status">${esc(complaint.status)}</span><br>Priority: ${esc(complaint.priority)} (${complaint.priorityScore}/100)<br>Category: ${esc(complaint.category)}<br>Location: ${esc(complaint.location || complaint.ward || 'Not provided')}<br><br>${esc(complaint.description)}</div><div class="app-item"><b>AI analysis</b><br>${esc(complaint.analysis?.summary || 'Analysis pending.')}<br>Confidence: ${complaint.analysis?.confidence ? Math.round(complaint.analysis.confidence * 100) + '%' : '—'}<br>Recommendation: ${esc(complaint.analysis?.recommendation || '—')}</div>${evidence}${related}${complaint.resolution ? `<div class="app-item"><b>Resolution</b><br>${esc(complaint.resolution.note)}<br>Status: ${esc(complaint.resolution.status)}${complaint.resolution.citizenComment ? `<br>Citizen comment: ${esc(complaint.resolution.citizenComment)}` : ''}</div>` : ''}${citizenVerification}${authorityControls}</div>`);
+    const workflow = $('#workflow-form', el);
+    if (workflow) {
+      $('select[name="status"]', workflow).value = complaint.status;
+      try { const departments = await api('/api/departments'); const select = $('#department-select', el); departments.forEach((department) => { const option = document.createElement('option'); option.value = department.id; option.textContent = department.name; option.selected = department.name === complaint.department; select.append(option); }); } catch (error) { toast(error.message); }
+      workflow.onsubmit = async (event) => { event.preventDefault(); try { await api(`/api/complaints/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(Object.fromEntries(new FormData(workflow))) }); closeModal(); await hydrate(); toast('Workflow updated.'); } catch (error) { toast(error.message); } };
+    }
+    const resolution = $('#resolution-form', el);
+    if (resolution) resolution.onsubmit = async (event) => { event.preventDefault(); const button = $('button', resolution); button.disabled = true; try { await api(`/api/complaints/${encodeURIComponent(id)}/resolve`, { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(resolution))) }); closeModal(); await hydrate(); toast('Resolution submitted for citizen verification.'); } catch (error) { toast(error.message); button.disabled = false; } };
+    const verification = $('#verification-form', el);
+    if (verification) verification.onsubmit = async (event) => { event.preventDefault(); const button = event.submitter; button.disabled = true; try { await api(`/api/complaints/${encodeURIComponent(id)}/verify`, { method: 'POST', body: JSON.stringify({ resolved: button.value === 'true', comment: new FormData(verification).get('comment') }) }); closeModal(); await hydrate(); toast('Your verification was recorded.'); } catch (error) { toast(error.message); button.disabled = false; } };
+  }).catch((error) => toast(error.message));
+}
+
+async function complaintQueue() {
+  try { const complaints = await api('/api/complaints'); const body = complaints.length ? `<div class="app-list">${complaints.map((complaint) => `<button class="app-item" type="button" data-complaint-id="${esc(complaint.id)}"><b>${esc(complaint.id)}</b> · ${esc(complaint.priority)}<br>${esc(complaint.title)}<br><small>${esc(complaint.status)}${complaint.isDemoData ? ' · SYNTHETIC DEMO' : ''}</small></button>`).join('')}</div>` : '<div class="app-empty">No complaints found.</div>'; const el = modal('Complaint queue', body); document.querySelectorAll('[data-complaint-id]', el).forEach((item) => { item.onclick = () => complaintDetail(item.dataset.complaintId); }); } catch (error) { toast(error.message); }
+}
+
+async function notificationDialog() {
+  try { const notifications = await api('/api/notifications'); const body = notifications.length ? `<div class="app-list">${notifications.map((notification) => `<button class="app-item" type="button" data-notification-id="${esc(notification.id)}"><b>${esc(notification.title)}</b><br>${esc(notification.message)}<br><small>${notification.readAt ? 'Read' : 'Unread'}</small></button>`).join('')}</div>` : '<div class="app-empty">No notifications yet.</div>'; const el = modal('Notifications', body); document.querySelectorAll('[data-notification-id]', el).forEach((item) => { item.onclick = async () => { try { await api(`/api/notifications/${encodeURIComponent(item.dataset.notificationId)}`, { method: 'PATCH', body: '{}' }); item.querySelector('small').textContent = 'Read'; } catch (error) { toast(error.message); } }; }); } catch (error) { toast(error.message); }
+}
+
+async function analyticsDialog() {
+  try { const analytics = await api('/api/analytics'); const section = (title, rows) => `<div class="app-item"><b>${title}</b><br>${rows.length ? rows.map((row) => `${esc(row.category || row.priority || row.status)}: ${row.count}`).join('<br>') : 'No data'}</div>`; modal('AI Analytics', `<div class="app-list"><div class="app-item"><b>${analytics.total}</b> total complaints<br>Systemic issues: ${analytics.systemicIssues}</div>${section('By category', analytics.byCategory)}${section('By priority', analytics.byPriority)}${section('By status', analytics.byStatus)}</div>`); } catch (error) { toast(error.message); }
+}
+
+async function mapDialog() {
+  if (!restricted(['AUTHORITY', 'ADMIN'])) return unavailable('Authority access required', 'Map intelligence is restricted to authority users.');
+  const el = modal('Real-time grievance map', '<div id="app-map" style="height:360px;border-radius:8px;background:#eceef0"></div><p id="map-fallback" style="font:14px/20px Inter;color:#45474c">Loading live complaint locations...</p>');
+  let points = [];
+  try {
+    points = await api('/api/map-data');
+    if (!points.length) { $('#map-fallback', el).textContent = 'No geolocated complaints yet.'; return; }
+    const loadLeaflet = () => new Promise((resolve, reject) => { if (window.L) return resolve(); const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.append(css); const script = document.createElement('script'); script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; script.onload = resolve; script.onerror = reject; document.head.append(script); });
+    await loadLeaflet();
+    const map = L.map($('#app-map', el)).setView([points[0].latitude, points[0].longitude], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+    points.forEach((point) => L.marker([point.latitude, point.longitude]).addTo(map).bindPopup(`<b>${esc(point.id)}</b><br>${esc(point.title)}<br>${esc(point.priority)} · ${esc(point.status)}`));
+    $('#map-fallback', el).textContent = `${points.length} locations from the application database.`;
+  } catch (error) { $('#app-map', el).style.display = 'none'; $('#map-fallback', el).innerHTML = `Map tiles are unavailable. <b>Location list fallback:</b><br>${points.map((point) => `${esc(point.ward || 'Unknown ward')} — ${esc(point.title)} — ${esc(point.priority)}`).join('<br>')}<br><button id="map-retry" type="button">Retry map</button>`; $('#map-retry', el).onclick = mapDialog; }
+}
+
+async function departmentsDialog() {
+  if (!restricted(['AUTHORITY', 'ADMIN'])) return unavailable('Authority access required', 'Department data is restricted to authority users.');
+  try { const departments = await api('/api/departments'); const body = departments.length ? `<div class="app-list">${departments.map((department) => `<div class="app-item"><b>${esc(department.name)}</b><br>${esc(department.description || '')}<br><small>${department.active ? 'Active' : 'Inactive'} · ${esc(department.contact || 'No contact')}</small></div>`).join('')}</div>` : '<div class="app-empty">No departments available.</div>'; modal('Departments', body); } catch (error) { toast(error.message); }
+}
+
+async function systemicDialog() {
+  if (!restricted(['AUTHORITY', 'ADMIN'])) return unavailable('Authority access required', 'Systemic issue intelligence is restricted to authority users.');
+  try { const issues = await api('/api/systemic-issues'); const body = issues.length ? `<div class="app-list">${issues.map((issue) => `<div class="app-item"><b>${esc(issue.name)}</b><br>${esc(issue.category)} · ${esc(issue.ward)}<br>${issue.complaintCount} complaints · ${esc(issue.priority)} · ${Math.round(issue.confidence * 100)}% confidence<br><small>${esc(issue.recommendedAction)}</small><br><button type="button" data-systemic-action="${esc(issue.id)}">Record Action</button></div>`).join('')}</div>` : '<div class="app-empty">No systemic issues detected from current complaint data.</div>'; const el = modal('Systemic issues', body); document.querySelectorAll('[data-systemic-action]', el).forEach((button) => { button.onclick = async () => { try { await api(`/api/systemic-issues/${encodeURIComponent(button.dataset.systemicAction)}/action`, { method: 'POST', body: '{}' }); button.textContent = 'Action recorded'; button.disabled = true; } catch (error) { toast(error.message); } }; }); } catch (error) { toast(error.message); }
+}
+
+function commandCenter() { closeModal(); window.scrollTo({ top: 0, behavior: 'smooth' }); hydrate().catch((error) => toast(error.message)); }
+function showSupport() { unavailable('Support', 'Support messaging is not configured in this application.'); }
+function showPublicTrust() { unavailable('Public Trust', 'Public Trust reporting has no connected API yet.'); }
+function showAuditLog() { unavailable('Audit Log', 'Audit records are written by the backend, but a read view is not connected yet.'); }
+function showResources() { unavailable('Resources', 'Resources are not configured in this application.'); }
+function showReports() { analyticsDialog(); }
+
+function wireNavigation() {
+  style();
+  document.querySelectorAll('button').forEach((button) => {
+    const text = button.textContent.trim();
+    if (text.includes('Report New Issue') || text.includes('Citizen Portal')) button.onclick = complaintDialog;
+    else if (text.includes('settings')) button.onclick = profileDialog;
+    else if (text.includes('notifications')) button.onclick = notificationDialog;
+    else if (text.includes('Emergency Alert')) button.onclick = () => unavailable('Emergency Alert', 'Emergency alert operations are not configured in this application.');
+    else if (text.includes('Switch to Citizen View')) button.hidden = true;
+  });
+  document.querySelectorAll('a[href="#"]').forEach((link) => {
+    link.onclick = (event) => {
+      event.preventDefault();
+      const text = link.textContent.trim();
+      if (text.includes('Command Center') || text.includes('Dashboard')) commandCenter();
+      else if (text.includes('Real-time Map')) mapDialog();
+      else if (text.includes('Grievance Feed') || text.includes('Incidents')) complaintQueue();
+      else if (text.includes('AI Analytics')) analyticsDialog();
+      else if (text.includes('Reports')) showReports();
+      else if (text.includes('Departments')) departmentsDialog();
+      else if (text.includes('Systemic Issues')) systemicDialog();
+      else if (text.includes('Public Trust')) showPublicTrust();
+      else if (text.includes('Audit Log')) showAuditLog();
+      else if (text.includes('Resources')) showResources();
+      else if (text.includes('Support') || text.includes('Contact') || text.includes('Privacy') || text.includes('Terms') || text.includes('Accessibility')) showSupport();
+      else if (text.includes('Sign Out')) logout();
+      else commandCenter();
+    };
+  });
+}
+
+async function start() {
+  wireNavigation();
+  try { state.user = await api('/api/auth/session'); if (state.user) await hydrate(); else authDialog(); }
+  catch (error) { toast(error.message); authDialog(); }
+}
+
 start();
