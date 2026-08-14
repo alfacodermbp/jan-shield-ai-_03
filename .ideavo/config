@@ -1,21 +1,51 @@
 {
   "systemSetup": [],
   "templateName": "custom",
-  "projectDependencies": [],
-  "codeChecks": [],
-  "buildSteps": [],
+  "projectDependencies": [
+    {
+      "name": "Install Dependencies",
+      "command": "npm install"
+    },
+    {
+      "name": "Initialize Database",
+      "command": "npm run db:migrate"
+    },
+    {
+      "name": "Seed Demo Data",
+      "command": "npm run db:seed"
+    }
+  ],
+  "codeChecks": [
+    {
+      "name": "Run Tests",
+      "command": "npm test"
+    }
+  ],
+  "buildSteps": [
+    {
+      "name": "Build Project",
+      "command": "npm run build"
+    }
+  ],
   "runStep": [
     {
       "name": "Run Dev Server",
-      "command": "npx --yes http-server . -p 3000 -a 0.0.0.0",
+      "command": "npm run dev -- --port 3000",
       "port": "3000"
     }
   ],
-  "deploySteps": [],
+  "deploySteps": [
+    {
+      "name": "Start Production Server",
+      "command": "npm start -- --port 3000"
+    }
+  ],
   "cleanupFiles": [
     ".env",
     ".ideavo/config",
-    ".ideavo/template"
+    ".ideavo/template",
+    "data/jan-shield.sqlite",
+    "data/uploads"
   ],
   "packageManager": "npm",
   "envPaths": [

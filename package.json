@@ -1,0 +1,17 @@
+{
+  "name": "jan-shield-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JAN-SHIELD AI citizen grievance intelligence platform",
+  "scripts": {
+    "dev": "node server.js --port 3000",
+    "start": "node server.js --port 3000",
+    "build": "node --check server.js && node --check app.js",
+    "test": "node --test",
+    "db:migrate": "node server.js --migrate",
+    "db:seed": "node server.js --seed"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
