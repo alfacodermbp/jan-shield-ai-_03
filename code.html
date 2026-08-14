@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>JAN-SHIELD AI - Citizen Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#f7f9fb",
+                        "tertiary-fixed": "#d8e2ff",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "outline-variant": "#c6c6cc",
+                        "inverse-primary": "#c0c6da",
+                        "primary-container": "#151b2a",
+                        "on-secondary-container": "#fefcff",
+                        "primary-fixed-dim": "#c0c6da",
+                        "on-tertiary-fixed": "#001a42",
+                        "surface-container-highest": "#e0e3e5",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-tertiary-fixed-variant": "#004395",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#00174b",
+                        "on-tertiary": "#ffffff",
+                        "surface-container": "#eceef0",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary-fixed-variant": "#404757",
+                        "on-primary": "#ffffff",
+                        "surface-dim": "#d8dadc",
+                        "tertiary-fixed-dim": "#adc6ff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "primary-fixed": "#dce2f6",
+                        "on-error-container": "#93000a",
+                        "on-background": "#191c1e",
+                        "on-primary-container": "#7d8496",
+                        "primary": "#000000",
+                        "tertiary": "#000000",
+                        "inverse-surface": "#2d3133",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#316bf3",
+                        "error": "#ba1a1a",
+                        "on-surface-variant": "#45474c",
+                        "secondary-fixed": "#dbe1ff",
+                        "secondary": "#0051d5",
+                        "surface-tint": "#585e6f",
+                        "surface-bright": "#f7f9fb",
+                        "on-tertiary-container": "#3980f4",
+                        "outline": "#76777d",
+                        "on-primary-fixed": "#151b2a",
+                        "background": "#f7f9fb",
+                        "tertiary-container": "#001a42",
+                        "surface-container-low": "#f2f4f6",
+                        "on-surface": "#191c1e",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "xs": "4px",
+                        "2xl": "48px",
+                        "base": "4px",
+                        "container-max": "1440px",
+                        "sm": "8px",
+                        "xl": "32px",
+                        "gutter": "24px",
+                        "lg": "24px",
+                        "md": "16px",
+                        "3xl": "64px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "code-md": ["jetbrainsMono"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "title-md": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "code-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased flex h-screen overflow-hidden">
+<!-- SideNavBar (Authority Command Shell - strictly adhering to JSON content) -->
+<aside class="hidden md:flex fixed left-0 top-0 h-screen w-64 z-40 flex-col p-4 gap-y-2 bg-surface-container-low dark:bg-primary-container border-r border-outline-variant dark:border-outline">
+<!-- Header -->
+<div class="flex items-center gap-sm mb-lg px-sm">
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary-fixed" style="font-variation-settings: 'FILL' 1;">shield</span>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-primary dark:text-on-primary-fixed truncate">Authority Command</h2>
+<p class="font-label-md text-label-md text-on-surface-variant truncate">Operational Status: Active</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex-1 space-y-xs">
+<a class="flex items-center gap-sm px-md py-sm rounded-xl font-title-md text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container hover:text-primary dark:hover:text-primary-fixed scale-98 active:scale-95 transition-transform transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Command Center
+            </a>
+<a class="flex items-center gap-sm px-md py-sm rounded-xl font-title-md text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container hover:text-primary dark:hover:text-primary-fixed scale-98 active:scale-95 transition-transform transition-all" href="#">
+<span class="material-symbols-outlined">map</span>
+                Real-time Map
+            </a>
+<!-- Active State: Grievance Feed (Closest to Citizen Complaints) -->
+<a class="flex items-center gap-sm px-md py-sm bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-xl font-title-md scale-98 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">forum</span>
+                Grievance Feed
+            </a>
+<a class="flex items-center gap-sm px-md py-sm rounded-xl font-title-md text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container hover:text-primary dark:hover:text-primary-fixed scale-98 active:scale-95 transition-transform transition-all" href="#">
+<span class="material-symbols-outlined">psychology</span>
+                AI Analytics
+            </a>
+<a class="flex items-center gap-sm px-md py-sm rounded-xl font-title-md text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container hover:text-primary dark:hover:text-primary-fixed scale-98 active:scale-95 transition-transform transition-all" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+                Public Trust
+            </a>
+<a class="flex items-center gap-sm px-md py-sm rounded-xl font-title-md text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container hover:text-primary dark:hover:text-primary-fixed scale-98 active:scale-95 transition-transform transition-all" href="#">
+<span class="material-symbols-outlined">history</span>
+                Audit Log
+            </a>
+</nav>
+<!-- CTA & Footer -->
+<div class="mt-auto flex flex-col gap-sm">
+<button class="w-full py-sm px-md rounded-lg border border-outline-variant text-primary font-title-md hover:bg-surface-container-high transition-colors text-center">
+                Switch to Citizen View
+            </button>
+<div class="pt-sm border-t border-outline-variant dark:border-outline space-y-xs">
+<a class="flex items-center gap-sm px-md py-sm rounded-xl font-title-md text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container hover:text-primary dark:hover:text-primary-fixed transition-all" href="#">
+<span class="material-symbols-outlined">help</span>
+                    Support
+                </a>
+<a class="flex items-center gap-sm px-md py-sm rounded-xl font-title-md text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container hover:text-primary dark:hover:text-primary-fixed transition-all" href="#">
+<span class="material-symbols-outlined">logout</span>
+                    Sign Out
+                </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="flex-1 ml-0 md:ml-64 flex flex-col h-screen overflow-y-auto bg-background">
+<!-- TopNavBar -->
+<nav class="sticky top-0 w-full z-50 bg-surface dark:bg-primary-container shadow-sm border-b border-outline-variant dark:border-outline">
+<div class="flex justify-between items-center h-16 px-margin-desktop w-full max-w-container-max mx-auto">
+<!-- Brand -->
+<div class="flex items-center gap-sm">
+<span class="text-title-lg font-title-lg font-black tracking-tight text-primary dark:text-surface-container-lowest">
+                        JAN-SHIELD AI
+                    </span>
+</div>
+<!-- Navigation Links (Center) -->
+<div class="hidden md:flex items-center gap-gutter h-full">
+<a class="h-full flex items-center text-secondary dark:text-secondary-fixed border-b-2 border-secondary dark:border-secondary-fixed pb-1 font-body-md text-body-md transition-all duration-200 ease-in-out" href="#">
+                        Dashboard
+                    </a>
+<a class="h-full flex items-center text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors font-body-md text-body-md transition-all duration-200 ease-in-out" href="#">
+                        Incidents
+                    </a>
+<a class="h-full flex items-center text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors font-body-md text-body-md transition-all duration-200 ease-in-out" href="#">
+                        Resources
+                    </a>
+<a class="h-full flex items-center text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors font-body-md text-body-md transition-all duration-200 ease-in-out" href="#">
+                        Reports
+                    </a>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-md">
+<button class="hidden lg:block px-md py-sm rounded-full bg-error text-on-error font-title-md hover:opacity-90 transition-opacity">
+                        Emergency Alert
+                    </button>
+<button class="hidden sm:block px-md py-sm rounded-full border border-outline-variant text-primary font-title-md hover:bg-surface-container-low transition-colors">
+                        Citizen Portal
+                    </button>
+<div class="flex items-center gap-xs">
+<button class="p-sm rounded-full text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-sm rounded-full text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<img alt="Authority Officer Profile" class="w-8 h-8 rounded-full object-cover border border-outline-variant ml-sm" data-alt="A professional headshot of an authority officer in a high-tech control room environment, sharp focus, cool lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlF0H4U3eSFPS0JYBncMLXM4ltTwSj8Q6Ecf3PmOEhsYN3a8QL7JEanH-mAbStPK34zieP9vqUJI7BhiagFqeEipmUp48f3PRwRYEocCKY8I9yCL8qkB9oDbohYEE3ivLU6HY3Nu58NtYTBlBPMPEZWzU82ozRhtO8ct0CRVnl62LJzWnD3TJrBEjy2i694ifl-_hAmFIpyImFI1kiTfZs1ulioEtyckRSWIbe2EsGUV_tJ6zV7g-O"/>
+</div>
+</div>
+</nav>
+<!-- Citizen Dashboard Content Canvas -->
+<div class="flex-1 px-margin-mobile md:px-margin-desktop py-xl max-w-container-max mx-auto w-full space-y-xl">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md">
+<div>
+<h1 class="font-display-lg text-display-lg text-on-surface">Good morning, Citizen.</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-xs">Here's what's happening with your complaints.</p>
+</div>
+<button class="flex items-center gap-sm px-lg py-md rounded-xl bg-primary text-on-primary font-title-md hover:opacity-90 transition-opacity shadow-sm shrink-0">
+<span class="material-symbols-outlined">add</span>
+                    Report New Issue
+                </button>
+</div>
+<!-- Quick Stats Bento -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<!-- Active -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between items-start shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center gap-sm text-secondary">
+<span class="material-symbols-outlined">pending_actions</span>
+<span class="font-title-md text-title-md">Active</span>
+</div>
+<div class="mt-md font-display-lg text-display-lg text-on-surface">3</div>
+</div>
+<!-- Resolved -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between items-start shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center gap-sm text-on-tertiary-fixed-variant">
+<span class="material-symbols-outlined">check_circle</span>
+<span class="font-title-md text-title-md">Resolved</span>
+</div>
+<div class="mt-md font-display-lg text-display-lg text-on-surface">8</div>
+</div>
+<!-- Awaiting -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between items-start shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center gap-sm text-error">
+<span class="material-symbols-outlined">hourglass_empty</span>
+<span class="font-title-md text-title-md">Awaiting Action</span>
+</div>
+<div class="mt-md font-display-lg text-display-lg text-on-surface">1</div>
+</div>
+</div>
+<!-- Recent Complaints Section -->
+<div class="space-y-md">
+<h2 class="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-sm">Recent Complaints</h2>
+<div class="flex flex-col gap-md">
+<!-- Complaint Card 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex-1 space-y-sm">
+<div class="flex items-center gap-sm">
+<span class="font-label-md text-label-md text-on-surface-variant bg-surface-container px-sm py-xs rounded-full">#C-2024-089</span>
+<span class="bg-error-container text-on-error-container font-label-md text-label-md px-sm py-xs rounded-full uppercase">High Priority</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface">Garbage near Ward 17 School</h3>
+<div class="flex items-center gap-sm text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px]">category</span>
+                                Sanitation
+                                <span class="text-outline mx-xs">•</span>
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+                                Submitted 2 days ago
+                            </div>
+</div>
+<!-- Status Stepper -->
+<div class="w-full md:w-auto flex items-center justify-between md:justify-end gap-sm shrink-0">
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant mt-xs">Submitted</span>
+</div>
+<div class="w-8 h-px bg-secondary mx-xs hidden sm:block"></div>
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-[16px]">psychology</span>
+</div>
+<span class="font-label-md text-label-md text-primary mt-xs">AI Analyzed</span>
+</div>
+<div class="w-8 h-px bg-outline-variant mx-xs hidden sm:block"></div>
+<div class="flex flex-col items-center opacity-50">
+<div class="w-8 h-8 rounded-full border-2 border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">directions_run</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant mt-xs">Action</span>
+</div>
+</div>
+</div>
+<!-- Complaint Card 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex-1 space-y-sm">
+<div class="flex items-center gap-sm">
+<span class="font-label-md text-label-md text-on-surface-variant bg-surface-container px-sm py-xs rounded-full">#C-2024-085</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed font-label-md text-label-md px-sm py-xs rounded-full uppercase">Medium Priority</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface">Pothole on Main St. Intersection</h3>
+<div class="flex items-center gap-sm text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px]">category</span>
+                                Infrastructure
+                                <span class="text-outline mx-xs">•</span>
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+                                Submitted 5 days ago
+                            </div>
+</div>
+<!-- Status Stepper -->
+<div class="w-full md:w-auto flex items-center justify-between md:justify-end gap-sm shrink-0">
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant mt-xs">Submitted</span>
+</div>
+<div class="w-8 h-px bg-secondary mx-xs hidden sm:block"></div>
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant mt-xs">AI Analyzed</span>
+</div>
+<div class="w-8 h-px bg-secondary mx-xs hidden sm:block"></div>
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-[16px]">directions_run</span>
+</div>
+<span class="font-label-md text-label-md text-primary mt-xs">Action</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="w-full py-8 mt-auto bg-surface-container-highest dark:bg-inverse-surface border-t border-outline-variant dark:border-outline">
+<div class="flex flex-col md:flex-row justify-between items-center px-margin-desktop max-w-container-max mx-auto gap-md">
+<div class="flex items-center gap-sm">
+<span class="font-title-md text-title-md text-on-surface dark:text-surface-bright">JAN-SHIELD AI</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant dark:text-surface-variant">© 2024 JAN-SHIELD AI. Secure Civic Infrastructure.</span>
+</div>
+<div class="flex items-center gap-md font-body-sm text-body-sm">
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-secondary-fixed transition-colors opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-secondary-fixed transition-colors opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-secondary-fixed transition-colors opacity-80 hover:opacity-100" href="#">Accessibility</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-secondary-fixed transition-colors opacity-80 hover:opacity-100" href="#">Contact Support</a>
+</div>
+</div>
+</footer>
+</main>
+</body></html>
